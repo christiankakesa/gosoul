@@ -54,8 +54,8 @@ func (gs *GoSoul) md5Auth() string {
 
 // Public methods
 func (gs *GoSoul) Authenticate(authType string) {
-	if authType != "kerberos" {
-		authType = "md5"
+	if authType != AUTHTYPE_KRB {
+		authType = AUTHTYPE_MD5
 	}
 	gs.Send("auth_ag ext_user none -")
 	gs.Parse()
