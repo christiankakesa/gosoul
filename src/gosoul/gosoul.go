@@ -97,7 +97,7 @@ func (gs *GoSoul) Read() string {
 		res = string(readBuffer[0 : resLen-1])
 	}
 	if len(res) > 0 {
-		fmt.Fprintf(os.Stdout, "%s\n", res)
+		fmt.Fprintf(os.Stdout, "[%s] : %s\n", time.LocalTime(), res)
 	} //DEBUG
 	return res
 }

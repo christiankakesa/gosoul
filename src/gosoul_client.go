@@ -55,9 +55,11 @@ func main() {
 	for true {
 		exception.Try(func(throw exception.Handler) { gc.Parse() }).Catch(func(x interface{}) {
 			go gc.Exit()
-			fmt.Fprintf(os.Stderr, "%v\n", x)
-			fmt.Fprintf(os.Stdout, "Thanks for using GO-Soul, the NetSoul ident service writen in GO language !!!\n")
+			fmt.Fprintf(os.Stderr, "%v\n", x.(int))
+			fmt.Fprintf(os.Stdout, "[Try/Catch] : Thanks for using GO-Soul, the NetSoul ident service writen in GO language !!!\n")
+			os.Exit(1)
 		})
 	}
+	fmt.Fprintf(os.Stdout, "[main] : Thanks for using GO-Soul, the NetSoul ident service writen in GO language !!!\n")
 	os.Exit(0)
 }
