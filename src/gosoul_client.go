@@ -41,26 +41,43 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Example : echo \"login_l:socks_pass\" > %s\n", confPATH)
 		os.Exit(1)
 	}
-	gc := gosoul.Connect(login, password)
-	gc.Authenticate(gosoul.AUTHTYPE_MD5)
-
+	gc, err := gosoul.Connect(login, password)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%s\n", err)
+		os.Exit(1)
+	}
+	err = gc.Authenticate(gosoul.AUTHTYPE_MD5)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%s\n", err)
+		os.Exit(1)
+	}
 	go func() {
 		sig := (<-signal.Incoming).(signal.UnixSignal)
 		//for {
-		if sig == syscall.SIGINT {
+		switch sig {
+		case syscall.SIGINT, syscall.SIGHUP:
 			gc.Exit()
-			fmt.Fprintf(os.Stderr, "%v\n", sig)
-			os.Exit(1)
+			fmt.Fprintf(os.Stdout, "Thanks for using GO-Soul, the NetSoul ident service writen in GO language !!!\n")
+			os.Exit(0)
+		default:
 		}
 		//}
 	}()
-
+restart:
 	for true {
-		exception.Try(func(throw exception.Handler) { gc.Parse() }).Catch(func(x interface{}) {
-			gc.Exit()
-			fmt.Fprintf(os.Stderr, "%v\n", x)
-			fmt.Fprintf(os.Stdout, "[Try/Catch] : Thanks for using GO-Soul, the NetSoul ident service writen in GO language !!!\n")
-			os.Exit(1)
+		x := exception.Try(func(throw exception.Handler) {
+			err = gc.Parse()
+			if err != nil {
+				throw(err.String())
+			}
 		})
+		if x != nil {
+			gc.Exit()
+			fmt.Fprintf(os.Stderr, "[ERROR catched] : %v\n", x.Value)
+			break
+		}
 	}
+	gc, _ = gosoul.Connect(login, password)
+	gc.Authenticate(gosoul.AUTHTYPE_MD5)
+	goto restart
 }
