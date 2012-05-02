@@ -1,4 +1,4 @@
 gosoul
 ======
 
-GoSoul a netsoul client written in Go.
+GoSoul is a netsoul authentication client written in Go.
