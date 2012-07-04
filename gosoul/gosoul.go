@@ -1,14 +1,15 @@
 package gosoul
 
 import (
-	"net"
-	"os"
-	"time"
-	"fmt"
 	"crypto/md5"
 	"encoding/hex"
-	"strings"
+	"errors"
+	"fmt"
+	"net"
+	"os"
 	"regexp"
+	"strings"
+	"time"
 )
 
 const (
@@ -26,24 +27,25 @@ type GoSoul struct {
 	password   string
 	salut      []string
 }
+
 // Private methods
-func (gs *GoSoul) open(login string, password string) (err os.Error) {
+func (gs *GoSoul) open(login string, password string) (err error) {
 	gs.login = login
 	gs.password = password
-	gs.connection, err = net.Dial("tcp", "", NSHOST+":"+NSPORT)
+	gs.connection, err = net.Dial("tcp", NSHOST+":"+NSPORT)
 	if err != nil {
 		return err
 	}
 	msg, _ := gs.Read()
-	gs.salut = strings.Split(msg, " ", 0)
+	gs.salut = strings.SplitN(msg, " ", 0)
 	return err
 }
 
 func (gs *GoSoul) md5Auth() string {
 	res := fmt.Sprintf("%s-%s/%s%s", gs.salut[2], gs.salut[3], gs.salut[4], gs.password)
 	md := md5.New()
-	md.Write(strings.Bytes(res))
-	authHashString := hex.EncodeToString(md.Sum())
+	md.Write([]byte(res))
+	authHashString := hex.EncodeToString(md.Sum(nil))
 	res = fmt.Sprintf("ext_user_log %s %s %s %s",
 		gs.login,
 		authHashString,
@@ -53,7 +55,7 @@ func (gs *GoSoul) md5Auth() string {
 }
 
 // Public methods
-func (gs *GoSoul) Authenticate(authType string) (err os.Error) {
+func (gs *GoSoul) Authenticate(authType string) (err error) {
 	if authType != AUTHTYPE_KRB {
 		authType = AUTHTYPE_MD5
 	}
@@ -61,22 +63,22 @@ func (gs *GoSoul) Authenticate(authType string) (err os.Error) {
 	gs.Parse()
 	switch authType {
 	case AUTHTYPE_KRB:
-		err = os.NewError("Kerberos authentication not yet implemented")
+		err = errors.New("Kerberos authentication not yet implemented")
 	case AUTHTYPE_MD5:
 		gs.Send(gs.md5Auth())
 	}
 	msg, _ := gs.Read()
 	if msg != "rep 002 -- cmd end" {
-		err = os.NewError("Bad login or password")
+		err = errors.New("Bad login or password")
 	} else {
 		gs.Send("user_cmd attach")
-		myt := time.LocalTime()
-		gs.Send(fmt.Sprintf("user_cmd state server:%d", myt.Seconds()))
+		myt := time.Now()
+		gs.Send(fmt.Sprintf("user_cmd state server:%d", myt.Unix()))
 	}
 	return err
 }
 
-func (gs *GoSoul) Parse() (err os.Error) {
+func (gs *GoSoul) Parse() (err error) {
 	res, err := gs.Read()
 	// PING CMD
 	if state, _ := regexp.MatchString("^ping.*", res); state {
@@ -85,20 +87,20 @@ func (gs *GoSoul) Parse() (err os.Error) {
 	return err
 }
 
-func (gs *GoSoul) Send(s string) (err os.Error) {
-	fmt.Fprintf(os.Stdout, "[send:%s] : %s\n", time.LocalTime(), s) //DEBUG
-	_, err = gs.connection.Write(strings.Bytes(s + "\n"))
+func (gs *GoSoul) Send(s string) (err error) {
+	fmt.Fprintf(os.Stdout, "[send:%s] : %s\n", time.Now(), s) //DEBUG
+	_, err = gs.connection.Write([]byte(s + "\n"))
 	return err
 }
 
-func (gs *GoSoul) Read() (res string, err os.Error) {
+func (gs *GoSoul) Read() (res string, err error) {
 	readBuffer := make([]byte, 2048)
 	resLen, err := gs.connection.Read(readBuffer)
 	if err == nil {
 		res = string(readBuffer[0 : resLen-1])
 	}
 	if len(res) > 0 {
-		fmt.Fprintf(os.Stdout, "[read:%s] : %s\n", time.LocalTime(), res)
+		fmt.Fprintf(os.Stdout, "[read:%s] : %s\n", time.Now(), res)
 	} //DEBUG
 	return res, err
 }
@@ -108,7 +110,7 @@ func (gs *GoSoul) Exit() {
 	gs.connection.Close()
 }
 
-func Connect(login string, password string) (gs *GoSoul, err os.Error) {
+func Connect(login string, password string) (gs *GoSoul, err error) {
 	gs = new(GoSoul)
 	err = gs.open(login, password)
 	return gs, err
