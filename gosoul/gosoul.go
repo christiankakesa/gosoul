@@ -37,7 +37,7 @@ func (gs *GoSoul) open(login string, password string) (err error) {
 		return err
 	}
 	msg, _ := gs.Read()
-	gs.salut = strings.SplitN(msg, " ", 0)
+	gs.salut = strings.SplitN(msg, " ", -1)
 	return err
 }
 
