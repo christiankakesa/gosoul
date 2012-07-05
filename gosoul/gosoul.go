@@ -28,7 +28,6 @@ type GoSoul struct {
 	salut      []string
 }
 
-// Private methods
 func (gs *GoSoul) open(login string, password string) (err error) {
 	gs.login = login
 	gs.password = password
@@ -54,7 +53,6 @@ func (gs *GoSoul) md5Auth() string {
 	return res
 }
 
-// Public methods
 func (gs *GoSoul) Authenticate(authType string) (err error) {
 	if authType != AUTHTYPE_KRB {
 		authType = AUTHTYPE_MD5
@@ -101,7 +99,7 @@ func (gs *GoSoul) Read() (res string, err error) {
 	}
 	if len(res) > 0 {
 		fmt.Fprintf(os.Stdout, "[read:%s] : %s\n", time.Now(), res)
-	} //DEBUG
+	}
 	return res, err
 }
 
