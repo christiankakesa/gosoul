@@ -6,6 +6,7 @@ import (
 	"os/signal"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/fenicks/gosoul/gosoul"
 )
@@ -26,7 +27,7 @@ func checkConfig() (login, password string, err error) {
 	if err != nil {
 		return
 	}
-	res := strings.SplitN(string(content[0:l-1]), ":", 0)
+	res := strings.SplitN(string(content[0:l-1]), ":", 2)
 	login = res[0]
 	password = res[1]
 
@@ -51,46 +52,25 @@ func main() {
 		fmt.Fprintf(os.Stderr, "%s\n", err)
 		os.Exit(1)
 	}
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGHUP)
 	go func() {
-		sigChan := make(chan os.Signal)
-		signal.Notify(sigChan)
-
-		sig := <-sigChan
-		//for {
-		switch sig {
-		case syscall.SIGINT, syscall.SIGHUP:
+		select {
+		case <-sigChan:
 			gc.Exit()
 			fmt.Fprintf(os.Stdout, "Thanks for using GO-Soul, the NetSoul ident service writen in GO language !!!\n")
 			os.Exit(0)
-		default:
 		}
-		//}
 	}()
-restart:
-	for true {
-		/* exp/exception package is outdated
-
-		x := exception.Try(func(throw exception.Handler) {
-			err = gc.Parse()
-			if err != nil {
-				throw(err.Error())
-			}
-		})
-		if x != nil {
-			gc.Exit()
-			fmt.Fprintf(os.Stderr, "[ERROR catched] : %v\n", x.Value)
-			break
-		}
-		*/
-
+	for {
 		err = gc.Parse()
 		if err != nil {
 			gc.Exit()
 			fmt.Fprintf(os.Stderr, "[ERROR caught] : %v\n", err.Error())
+			time.Sleep(time.Second)
 			break
 		}
+		gc, _ = gosoul.Connect(login, password)
+		gc.Authenticate(gosoul.AUTHTYPE_MD5)
 	}
-	gc, _ = gosoul.Connect(login, password)
-	gc.Authenticate(gosoul.AUTHTYPE_MD5)
-	goto restart
 }
