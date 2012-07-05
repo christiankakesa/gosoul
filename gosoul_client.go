@@ -68,9 +68,8 @@ func main() {
 			gc.Exit()
 			fmt.Fprintf(os.Stderr, "[ERROR caught] : %v\n", err.Error())
 			time.Sleep(time.Second)
-			break
+			gc, _ = gosoul.Connect(login, password)
+			gc.Authenticate(gosoul.AUTHTYPE_MD5)
 		}
-		gc, _ = gosoul.Connect(login, password)
-		gc.Authenticate(gosoul.AUTHTYPE_MD5)
 	}
 }
