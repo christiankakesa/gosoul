@@ -67,9 +67,21 @@ func main() {
 		if err != nil {
 			gc.Exit()
 			fmt.Fprintf(os.Stderr, "[ERROR caught] : %v\n", err.Error())
-			time.Sleep(time.Second)
-			gc, _ = gosoul.Connect(login, password)
-			gc.Authenticate(gosoul.AUTHTYPE_MD5)
+			tryReconnect := 0
+			for {
+			  if tryReconnect > 100 {
+			    fmt.Fprintf(os.Stderr, "Try to reconnect 100 times without success !!!\n")
+			    os.Exit(0)
+			  }
+			  time.Sleep(time.Second)
+			  gc, err = gosoul.Connect(login, password)
+			  if err != nil {
+			  tryReconnect += 1
+          continue
+			  }
+			  gc.Authenticate(gosoul.AUTHTYPE_MD5)
+			  break
+			}
 		}
 	}
 }
