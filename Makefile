@@ -1,6 +1,9 @@
+# GoSoul client Makefile
+#
+# Christian Kakesa <christian.kakesa@gmail.com>
 
-gosoul_client: gosoul_client.go
-	go build $^
+gosoul_client: gosoul_client.go fmt
+	go build $<
 
 fmt:
 	gofmt -w *.go
