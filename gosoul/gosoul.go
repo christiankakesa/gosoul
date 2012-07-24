@@ -1,3 +1,9 @@
+// Copyright 2012 Christian Kakesa. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
+// Package gosoul provides functions to connect to the NetSoul socket.
+// For now only authentication is supported and the PING server command.
 package gosoul
 
 import (
@@ -5,8 +11,8 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"log"
 	"net"
-	"os"
 	"regexp"
 	"strings"
 	"time"
@@ -22,22 +28,10 @@ const (
 )
 
 type GoSoul struct {
-	connection net.Conn
-	login      string
-	password   string
-	salut      []string
-}
-
-func (gs *GoSoul) open(login string, password string) (err error) {
-	gs.login = login
-	gs.password = password
-	gs.connection, err = net.Dial("tcp", NSHOST+":"+NSPORT)
-	if err != nil {
-		return err
-	}
-	msg, _ := gs.Read()
-	gs.salut = strings.Split(msg, " ")
-	return err
+	conn     net.Conn
+	login    string
+	password string
+	salut    []string
 }
 
 func (gs *GoSoul) md5Auth() string {
@@ -53,7 +47,7 @@ func (gs *GoSoul) md5Auth() string {
 	return res
 }
 
-func (gs *GoSoul) Authenticate(authType string) (err error) {
+func (gs *GoSoul) Authenticate(authType string) error {
 	if authType != AUTHTYPE_KRB {
 		authType = AUTHTYPE_MD5
 	}
@@ -61,55 +55,61 @@ func (gs *GoSoul) Authenticate(authType string) (err error) {
 	gs.Parse()
 	switch authType {
 	case AUTHTYPE_KRB:
-		err = errors.New("Kerberos authentication not yet implemented")
+		return errors.New("Kerberos authentication not yet implemented")
 	case AUTHTYPE_MD5:
 		gs.Send(gs.md5Auth())
 	}
 	msg, _ := gs.Read()
 	if msg != "rep 002 -- cmd end" {
-		err = errors.New("Bad login or password")
+		return errors.New("Bad login or password")
 	} else {
 		gs.Send("user_cmd attach")
 		myt := time.Now()
 		gs.Send(fmt.Sprintf("user_cmd state server:%d", myt.Unix()))
 	}
-	return err
+	return nil
 }
 
-func (gs *GoSoul) Parse() (err error) {
+func (gs *GoSoul) Parse() error {
 	res, err := gs.Read()
-	// PING CMD
 	if state, _ := regexp.MatchString("^ping.*", res); state {
 		err = gs.Send(res)
 	}
 	return err
 }
 
-func (gs *GoSoul) Send(s string) (err error) {
-	fmt.Fprintf(os.Stdout, "[send:%s] : %s\n", time.Now(), s) //DEBUG
-	_, err = gs.connection.Write([]byte(s + "\n"))
+func (gs *GoSoul) Send(s string) error {
+	_, err := gs.conn.Write([]byte(s + "\n"))
+	log.Printf("[gosoul-send] : %s\n", s)
 	return err
 }
 
-func (gs *GoSoul) Read() (res string, err error) {
+func (gs *GoSoul) Read() (string, error) {
 	readBuffer := make([]byte, 2048)
-	resLen, err := gs.connection.Read(readBuffer)
-	if err == nil {
-		res = string(readBuffer[0 : resLen-1])
+	resLen, err := gs.conn.Read(readBuffer)
+	if err != nil {
+		return "", err
 	}
-	if len(res) > 0 {
-		fmt.Fprintf(os.Stdout, "[read:%s] : %s\n", time.Now(), res)
-	}
+	res := string(readBuffer[0 : resLen-1])
+	log.Printf("[gosoul-read] : %s\n", res)
 	return res, err
 }
 
 func (gs *GoSoul) Exit() {
 	gs.Send("exit")
-	gs.connection.Close()
+	gs.conn.Close()
 }
 
-func Connect(login string, password string) (gs *GoSoul, err error) {
-	gs = new(GoSoul)
-	err = gs.open(login, password)
+func New(login string, password string) (*GoSoul, error) {
+	conn, err := net.Dial("tcp", NSHOST+":"+NSPORT)
+	if err != nil {
+		return nil, err
+	}
+	gs := &GoSoul{login: login, password: password, conn: conn}
+	msg, err := gs.Read()
+	if err != nil {
+		return nil, err
+	}
+	gs.salut = strings.Split(msg, " ")
 	return gs, err
 }
