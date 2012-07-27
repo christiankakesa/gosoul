@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"os/signal"
 	"strings"
@@ -38,43 +39,39 @@ func checkConfig() (login, password string, err error) {
 func main() {
 	login, password, err := checkConfig()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "The file %s don't exist.\n", confPath)
-		fmt.Fprintf(os.Stderr, "Create it and put one line with \"login_l:socks_pass\"\n")
-		fmt.Fprintf(os.Stderr, "Example : echo \"login_l:socks_pass\" > %s\n", confPath)
-		os.Exit(1)
+		log.Println(fmt.Sprintf("The file %s does not exist.", confPath))
+		log.Fatalln(fmt.Sprintf("Example : echo \"%s:my_socks_pass\" > %s", login, confPath))
 	}
 	gos, err := gosoul.New(login, password)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "%s\n", err)
-		os.Exit(2)
+		log.Fatalln("[ERROR caught] : ", err)
 	}
 	err = gos.Authenticate(gosoul.AUTHTYPE_MD5)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "%s\n", err)
-		os.Exit(3)
+		log.Fatalln("[ERROR caught] : ", err)
 	}
-	sigChan := make(chan os.Signal, 1)
+	sigChan := make(chan os.Signal)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGHUP)
 	go func() {
 		select {
 		case <-sigChan:
 			gos.Exit()
-			fmt.Fprintf(os.Stdout, "Thanks for using GO-Soul, the NetSoul ident service writen in GO language !!!\n")
+			log.Println("Thanks for using GoSoul, the NetSoul ident service writen in Go language !!!")
 			os.Exit(0)
 		}
 	}()
 	for {
 		err = gos.Parse()
 		if err != nil {
-			gos.Exit()
-			fmt.Fprintf(os.Stderr, "[ERROR caught] : %v\n", err.Error())
-			tryReconnect := 0
+			gos.Exit() // Ensure socket close
+			log.Println("[ERROR caught] : ", err)
+			tryReconnect := 1
 			for {
-				if tryReconnect > 100 {
-					fmt.Fprintf(os.Stderr, "Try to reconnect 100 times without success !!!\n")
-					os.Exit(0)
+				if tryReconnect >= 100 {
+					log.Fatalln("[ERROR caught] : Try to reconnect 100 times without success !!!")
 				}
 				time.Sleep(time.Second)
+				log.Println("Try to reconnect : ", string(tryReconnect))
 				gos, err = gosoul.New(login, password)
 				if err != nil {
 					tryReconnect += 1
