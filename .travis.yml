@@ -1,1 +1,4 @@
-install: make get-deps
+language: go
+install:
+  - go get github.com/fenicks/gosoul/gosoul
+script: make
