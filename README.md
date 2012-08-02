@@ -2,7 +2,7 @@
 
 GoSoul is a [netsoul](http://code.google.com/p/rubysoul-ng/wiki/NetSoul) authentication client written in Go.
 
-    go get github.com/fenicks/gosoul/gosoul
+    go get -u github.com/fenicks/gosoul
     make
     ./gosoul_client
 
