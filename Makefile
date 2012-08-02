@@ -2,12 +2,14 @@
 #
 # Christian Kakesa <christian.kakesa@gmail.com>
 
-gosoul_client: gosoul_client.go fmt
-	go build $<
+all: fmt gosoul_client
+
+gosoul_client: bin/gosoul_client.go
+	go build -o bin/$@ $<
 
 fmt:
 	gofmt -w *.go
-	gofmt -w gosoul/*.go
+	gofmt -w bin/*.go
 
 clean:
 	rm -rf gosoul_client

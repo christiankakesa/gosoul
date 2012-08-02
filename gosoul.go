@@ -19,11 +19,10 @@ import (
 	"time"
 )
 
+// Deafult values for the GoSoul client
 const (
-	gosHost     = "ns-server.epita.fr"
-	gosPort     = "4242"
-	gosData     = "GoSoul, by Christian KAKESA"
-	gosLocation = "GoSoul@HOME"
+	GOS_DATA     = "GoSoul, by Christian KAKESA"
+	GOS_LOCATION = "GoSoul@HOME"
 )
 
 // Athentication type : Kerberos or MD5
@@ -32,54 +31,68 @@ const (
 	AUTHTYPE_MD5 = "md5"
 )
 
+type UserData struct {
+	login    string
+	password string
+	data     string
+	State    string
+	Location string
+}
+
+const (
+	UserStateActif  string = "actif"   // User is connected and interaction is possible
+	UserStateIdle   string = "idle"    // User is connected but no interaction is possible
+	UserStateServer string = "service" // Service connection to coonect a device or hardware
+)
+
 type GoSoul struct {
-	login      string
-	password   string
-	conn       net.Conn
-	salut      []string
-	NsData     string
-	NsLocation string
+	User  UserData
+	conn  net.Conn
+	salut []string
 }
 
 func (gs *GoSoul) md5Auth() string {
-	res := fmt.Sprintf("%s-%s/%s%s", gs.salut[2], gs.salut[3], gs.salut[4], gs.password)
+	res := fmt.Sprintf("%s-%s/%s%s", gs.salut[2], gs.salut[3], gs.salut[4], gs.User.password)
 	md := md5.New()
 	md.Write([]byte(res))
 	authHashString := hex.EncodeToString(md.Sum(nil))
 	res = fmt.Sprintf("ext_user_log %s %s %s %s",
-		gs.login,
+		gs.User.login,
 		authHashString,
-		gs.NsData,
-		gs.NsLocation)
+		gs.User.data,
+		gs.User.Location)
 	return res
 }
 
 func (gs *GoSoul) Authenticate(authType string) error {
-	gs.Send("auth_ag ext_user none -")
-	gs.Parse()
+	gs.send("auth_ag ext_user none -")
+	err := gs.Parse()
+	if err != nil {
+		return err
+	}
 	switch authType {
 	case AUTHTYPE_KRB:
 		return errors.New("Kerberos authentication not yet implemented")
 	case AUTHTYPE_MD5:
-		gs.Send(gs.md5Auth())
+		gs.send(gs.md5Auth())
 	}
-	msg, _ := gs.Read()
+	msg, _ := gs.read()
 	if msg != "rep 002 -- cmd end" {
 		return errors.New("Bad login or password")
 	} else {
-		gs.Send("user_cmd attach")
-		gs.Send(fmt.Sprintf("user_cmd state actif:%d", time.Now().Unix()))
+		gs.send("user_cmd attach")
+		gs.SetState(UserStateServer)
 	}
 	return nil
 }
 
 func (gs *GoSoul) Parse() error {
-	res, err := gs.Read()
+	res, err := gs.read()
 	if err != nil {
 		return err
 	}
 	if state, _ := regexp.MatchString("^ping.*", res); state {
-		err = gs.Send(res)
+		err = gs.send(res)
 		if err != nil {
 			return err
 		}
@@ -87,7 +100,7 @@ func (gs *GoSoul) Parse() error {
 	return nil
 }
 
-func (gs *GoSoul) Send(s string) error {
+func (gs *GoSoul) send(s string) error {
 	_, err := gs.conn.Write([]byte(s + "\r\n"))
 	if err != nil {
 		return err
@@ -96,7 +109,7 @@ func (gs *GoSoul) Send(s string) error {
 	return nil
 }
 
-func (gs *GoSoul) Read() (string, error) {
+func (gs *GoSoul) read() (string, error) {
 	readBuffer := make([]byte, 2048)
 	resLen, err := gs.conn.Read(readBuffer)
 	if err != nil {
@@ -110,35 +123,34 @@ func (gs *GoSoul) Read() (string, error) {
 	return res, nil
 }
 
+func (gs *GoSoul) SetState(state string) {
+	gs.User.State = state
+	gs.send(fmt.Sprintf("user_cmd state %s:%d", state, time.Now().Unix()))
+}
+
+//TODO: Others netsoul send command here...
+
 func (gs *GoSoul) Exit() {
-	gs.Send("exit")
+	gs.send("exit")
 	gs.conn.Close()
 }
 
-func NewGoSoul(login, password, host, port string) (gs *GoSoul, err error) {
+// Provides a GoSoul instance for netsoul server interaction.
+func New(login, password, addr string) (gs *GoSoul, err error) {
 	gs = &GoSoul{
-		login:      login,
-		password:   password,
-		NsData:     url.QueryEscape(gosData),
-		NsLocation: url.QueryEscape(gosLocation)}
-	if host == "" {
-		host = gosHost
-	}
-	if port == "" {
-		port = gosPort
-	}
-	gs.conn, err = net.Dial("tcp", host+":"+port)
+		User: UserData{login: login,
+			password: password,
+			data:     url.QueryEscape(GOS_DATA),
+			State:    UserStateServer,
+			Location: url.QueryEscape(GOS_LOCATION)}}
+	gs.conn, err = net.Dial("tcp", addr)
 	if err != nil {
 		return nil, err
 	}
-	msg, err := gs.Read()
+	msg, err := gs.read()
 	if err != nil {
 		return nil, err
 	}
 	gs.salut = strings.Split(msg, " ")
 	return gs, err
-}
-
-func New(login, password string) (*GoSoul, error) {
-	return NewGoSoul(login, password, "", "")
 }

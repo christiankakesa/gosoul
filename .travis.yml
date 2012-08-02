@@ -1,4 +1,4 @@
 language: go
 install:
-  - go get github.com/fenicks/gosoul/gosoul
+  - go get github.com/fenicks/gosoul
 script: make
