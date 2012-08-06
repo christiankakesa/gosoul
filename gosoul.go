@@ -41,9 +41,10 @@ type UserData struct {
 }
 
 const (
-	UserStateActif  string = "actif"   // User is connected and interaction is possible
-	UserStateIdle   string = "idle"    // User is connected but no interaction is possible
-	UserStateServer string = "service" // Service connection to coonect a device or hardware
+	UserStateActif  string = "actif"  // User is connected and interaction is possible
+	UserStateAway   string = "away"   // User is connected but no interaction is possible (out of the computer/device)
+	UserStateIdle   string = "idle"   // User is connected but no interaction is possible (do nothing for a long time)
+	UserStateServer string = "server" // User is on application server
 )
 
 type GoSoul struct {
@@ -138,8 +139,7 @@ func (gs *GoSoul) Exit() {
 
 // Provides a GoSoul instance for netsoul server interaction.
 func New(login, password, addr string) (gs *GoSoul, err error) {
-	// Get the the kernel hostname for th NetSoul location
-	//var location string
+	// Get the the kernel hostname for client location
 	location, err := os.Hostname()
 	if err != nil {
 		location = GOS_LOCATION
