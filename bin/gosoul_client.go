@@ -59,7 +59,6 @@ func main() {
 	if err != nil {
 		log.Fatalln("[ERROR caught]: ", err)
 	}
-	gos.SetState(gosoul.UserStateActif)
 	sigChan := make(chan os.Signal)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGHUP)
 	go func() {
@@ -92,7 +91,6 @@ func main() {
 					tryReconnect += 1
 					continue
 				}
-				gos.SetState(gosoul.UserStateActif)
 				break
 			}
 		}
