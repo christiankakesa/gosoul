@@ -15,8 +15,8 @@ import (
 )
 
 var (
-	confDir  = os.Getenv("HOME") + "/.config/gosoul"
-	confPath = confDir + "/config.txt"
+	confDir  = os.Getenv("HOME") + string(os.PathSeparator) + ".config" + string(os.PathSeparator) + "gosoul"
+	confPath = confDir + string(os.PathSeparator) + "/config.txt"
 )
 
 func checkConfig() (login, password string, err error) {
