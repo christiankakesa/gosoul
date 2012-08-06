@@ -4,7 +4,7 @@ GoSoul is a [netsoul](http://code.google.com/p/rubysoul-ng/wiki/NetSoul) authent
 
     go get -u github.com/fenicks/gosoul
     make
-    ./gosoul_client
+    ./bin/gosoul_client
 
 # Links
  *   [Ubuntu netsoul](http://doc.ubuntu-fr.org/netsoul)

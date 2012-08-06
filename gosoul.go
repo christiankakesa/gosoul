@@ -14,6 +14,7 @@ import (
 	"log"
 	"net"
 	"net/url"
+	"os"
 	"regexp"
 	"strings"
 	"time"
@@ -22,7 +23,7 @@ import (
 // Deafult values for the GoSoul client
 const (
 	GOS_DATA     = "GoSoul, by Christian KAKESA"
-	GOS_LOCATION = "GoSoul@HOME"
+	GOS_LOCATION = "Home"
 )
 
 // Athentication type : Kerberos or MD5
@@ -137,12 +138,18 @@ func (gs *GoSoul) Exit() {
 
 // Provides a GoSoul instance for netsoul server interaction.
 func New(login, password, addr string) (gs *GoSoul, err error) {
+	// Get the the kernel hostname for th NetSoul location
+	//var location string
+	location, err := os.Hostname()
+	if err != nil {
+		location = GOS_LOCATION
+	}
 	gs = &GoSoul{
 		User: UserData{login: login,
 			password: password,
 			data:     url.QueryEscape(GOS_DATA),
 			State:    UserStateServer,
-			Location: url.QueryEscape(GOS_LOCATION)}}
+			Location: url.QueryEscape("@" + location)}}
 	gs.conn, err = net.Dial("tcp", addr)
 	if err != nil {
 		return nil, err
