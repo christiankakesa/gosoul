@@ -27,24 +27,28 @@ const (
 )
 
 // Athentication type : Kerberos or MD5
+type AuthType string
+
 const (
-	AUTHTYPE_KRB = "kerberos"
-	AUTHTYPE_MD5 = "md5"
+	AUTHTYPE_KRB AuthType = "kerberos"
+	AUTHTYPE_MD5 AuthType = "md5"
 )
 
 type UserData struct {
 	login    string
 	password string
 	data     string
-	State    string
+	State    UserStates
 	Location string
 }
 
+type UserStates string
+
 const (
-	UserStateActif  string = "actif"  // User is connected and interaction is possible
-	UserStateAway   string = "away"   // User is connected but no interaction is possible (out of the computer/device)
-	UserStateIdle   string = "idle"   // User is connected but no interaction is possible (do nothing for a long time)
-	UserStateServer string = "server" // User is on application server
+	UserStateActif  UserStates = "actif"  // Client is connected and interaction is possible
+	UserStateAway   UserStates = "away"   // Client is connected but no interaction is possible (out of the computer/device)
+	UserStateIdle   UserStates = "idle"   // Client is connected but no interaction is possible (do nothing for a long time)
+	UserStateServer UserStates = "server" // Client is on application server
 )
 
 type GoSoul struct {
@@ -66,13 +70,13 @@ func (gs *GoSoul) md5Auth() string {
 	return res
 }
 
-func (gs *GoSoul) Authenticate(authType string) error {
+func (gs *GoSoul) Authenticate(at AuthType) error {
 	gs.send("auth_ag ext_user none -")
 	err := gs.Parse()
 	if err != nil {
 		return err
 	}
-	switch authType {
+	switch at {
 	case AUTHTYPE_KRB:
 		return errors.New("Kerberos authentication not yet implemented")
 	case AUTHTYPE_MD5:
@@ -125,9 +129,9 @@ func (gs *GoSoul) read() (string, error) {
 	return res, nil
 }
 
-func (gs *GoSoul) SetState(state string) {
-	gs.User.State = state
-	gs.send(fmt.Sprintf("user_cmd state %s:%d", state, time.Now().Unix()))
+func (gs *GoSoul) SetState(us UserStates) {
+	gs.User.State = us
+	gs.send(fmt.Sprintf("user_cmd state %s:%d", string(us), time.Now().Unix()))
 }
 
 //TODO: Others netsoul send command here...
