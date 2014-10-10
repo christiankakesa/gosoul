@@ -7,6 +7,7 @@
 
 ## Add your credentials in config file
 
+    mkdir -p $HOME/.config/gosoul
     echo "user_name:my_socks_password" > $HOME/.config/gosoul/config.txt
 
 ## Run gosoul client
