@@ -11,7 +11,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/fenicks/gosoul"
+	gosoul "github.com/fenicks/gosoul/lib"
 )
 
 var (
