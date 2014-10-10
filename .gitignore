@@ -1,4 +1,4 @@
-bin/gosoul_client
+gosoul
 .project
 # Compiled Object files, Static and Dynamic libs (Shared Objects)
 *.o
