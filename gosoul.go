@@ -1,167 +1,101 @@
-// Copyright 2012 Christian Kakesa. All rights reserved.
-// Use of this source code is governed by a BSD-style
-// license that can be found in the LICENSE file.
-
-// Package gosoul provides functions to connect to the NetSoul socket.
-// For now only authentication is supported and the PING server command.
-package gosoul
+package main
 
 import (
-	"crypto/md5"
-	"encoding/hex"
-	"errors"
+	"flag"
 	"fmt"
 	"log"
-	"net"
-	"net/url"
 	"os"
-	"regexp"
+	"os/signal"
+	"strconv"
 	"strings"
+	"syscall"
 	"time"
+
+	"github.com/fenicks/gosoul"
 )
 
-// Deafult values for the GoSoul client
-const (
-	GOS_DATA     = "GoSoul, by Christian KAKESA"
-	GOS_LOCATION = "Home"
+var (
+	confDir  = os.Getenv("HOME") + string(os.PathSeparator) + ".config" + string(os.PathSeparator) + "gosoul"
+	confPath = confDir + string(os.PathSeparator) + "config.txt"
 )
 
-// Athentication type : Kerberos or MD5
-type AuthType string
-
-const (
-	AUTHTYPE_KRB AuthType = "kerberos"
-	AUTHTYPE_MD5 AuthType = "md5"
-)
-
-type UserData struct {
-	login    string
-	password string
-	data     string
-	State    UserStates
-	Location string
-}
-
-type UserStates string
-
-const (
-	UserStateActif  UserStates = "actif"  // Client is connected and interaction is possible
-	UserStateAway   UserStates = "away"   // Client is connected but no interaction is possible (out of the computer/device)
-	UserStateIdle   UserStates = "idle"   // Client is connected but no interaction is possible (do nothing for a long time)
-	UserStateServer UserStates = "server" // Client is on application server
-)
-
-type GoSoul struct {
-	User  UserData
-	conn  net.Conn
-	salut []string
-}
-
-func (gs *GoSoul) md5Auth() string {
-	res := fmt.Sprintf("%s-%s/%s%s", gs.salut[2], gs.salut[3], gs.salut[4], gs.User.password)
-	md := md5.New()
-	md.Write([]byte(res))
-	authHashString := hex.EncodeToString(md.Sum(nil))
-	res = fmt.Sprintf("ext_user_log %s %s %s %s",
-		gs.User.login,
-		authHashString,
-		gs.User.data,
-		gs.User.Location)
-	return res
-}
-
-func (gs *GoSoul) Authenticate(at AuthType) error {
-	gs.send("auth_ag ext_user none -")
-	err := gs.Parse()
+func checkConfig() (login, password string, err error) {
+	if _, err := os.Stat(confDir); os.IsNotExist(err) {
+		os.Mkdir(confDir, 0755)
+	}
+	f, err := os.Open(confPath)
 	if err != nil {
-		return err
+		return "", "", err
 	}
-	switch at {
-	case AUTHTYPE_KRB:
-		return errors.New("Kerberos authentication not yet implemented")
-	case AUTHTYPE_MD5:
-		gs.send(gs.md5Auth())
+	content := make([]byte, 2048)
+	l, err := f.Read(content)
+	if err != nil {
+		return "", "", err
 	}
-	msg, _ := gs.read()
-	if msg != "rep 002 -- cmd end" {
-		return errors.New("Bad login or password")
-	} else {
-		gs.send("user_cmd attach")
-		gs.SetState(UserStateServer)
-	}
-	return nil
+	res := strings.SplitN(string(content[0:l-1]), ":", 2)
+	login = res[0]
+	password = res[1]
+	return login, password, nil
 }
 
-func (gs *GoSoul) Parse() error {
-	res, err := gs.read()
+var server string
+
+func init() {
+	flag.StringVar(&server, "server", "ns-server.epita.fr:4242", "NetSoul server host in this form : host:port, ip:port, [ipv6]:port")
+}
+
+func main() {
+	flag.Parse()
+	login, password, err := checkConfig()
 	if err != nil {
-		return err
+		log.Println(fmt.Sprintf("The file %s does not exist", confPath))
+		if login == "" {
+			login = "user_name"
+		}
+		log.Fatalln(fmt.Sprintf(`Example: echo "%s:my_socks_pass" > %s`, login, confPath))
 	}
-	if state, _ := regexp.MatchString("^ping.*", res); state {
-		err = gs.send(res)
+	gos, err := gosoul.New(login, password, server)
+	if err != nil {
+		log.Fatalln("[ERROR caught]: ", err)
+	}
+	err = gos.Authenticate(gosoul.AUTHTYPE_MD5)
+	if err != nil {
+		log.Fatalln("[ERROR caught]: ", err)
+	}
+	sigChan := make(chan os.Signal)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGHUP)
+	go func() {
+		_ = <-sigChan
+		gos.Exit()
+		log.Println("Thanks for using GoSoul, the NetSoul ident service writen in Go language !!!")
+		os.Exit(0)
+	}()
+	for {
+		err = gos.Parse()
 		if err != nil {
-			return err
+			log.Println("[ERROR caught]: ", err)
+			gos.Exit() // Ensure socket close
+			tryReconnect := 1
+			for {
+				if tryReconnect == 100 {
+					log.Fatalln("[ERROR caught]: Try to reconnect 100 times without success !!!")
+				}
+				time.Sleep(1 * time.Second)
+				log.Println("Try to reconnect to the NetSoul server: retry =>", strconv.Itoa(tryReconnect))
+				gos, err = gosoul.New(login, password, server)
+				if err != nil {
+					log.Println("[ERROR caught]: ", err)
+					tryReconnect += 1
+					continue
+				}
+				err = gos.Authenticate(gosoul.AUTHTYPE_MD5)
+				if err != nil {
+					log.Println("[ERROR caught]: ", err)
+					tryReconnect += 1
+					continue
+				}
+				break
+			}
 		}
 	}
-	return nil
-}
-
-func (gs *GoSoul) send(s string) error {
-	_, err := gs.conn.Write([]byte(s + "\r\n"))
-	if err != nil {
-		return err
-	}
-	log.Println(fmt.Sprintf("[gosoul-send] : %s", s))
-	return nil
-}
-
-func (gs *GoSoul) read() (string, error) {
-	readBuffer := make([]byte, 2048)
-	resLen, err := gs.conn.Read(readBuffer)
-	if err != nil {
-		return "", err
-	}
-	res := string(readBuffer[0 : resLen-1])
-	if err != nil {
-		return "", err
-	}
-	log.Println(fmt.Sprintf("[gosoul-read] : %s", res))
-	return res, nil
-}
-
-func (gs *GoSoul) SetState(us UserStates) {
-	gs.User.State = us
-	gs.send(fmt.Sprintf("user_cmd state %s:%d", string(us), time.Now().Unix()))
-}
-
-//TODO: Others netsoul send command here...
-
-func (gs *GoSoul) Exit() {
-	gs.send("exit")
-	gs.conn.Close()
-}
-
-// Provides a GoSoul instance for netsoul server interaction.
-func New(login, password, addr string) (gs *GoSoul, err error) {
-	// Get the the kernel hostname for client location
-	location, err := os.Hostname()
-	if err != nil {
-		location = GOS_LOCATION
-	}
-	gs = &GoSoul{
-		User: UserData{login: login,
-			password: password,
-			data:     url.QueryEscape(GOS_DATA),
-			State:    UserStateServer,
-			Location: url.QueryEscape("@" + location)}}
-	gs.conn, err = net.Dial("tcp", addr)
-	if err != nil {
-		return nil, err
-	}
-	msg, err := gs.read()
-	if err != nil {
-		return nil, err
-	}
-	gs.salut = strings.Split(msg, " ")
-	return gs, err
 }
