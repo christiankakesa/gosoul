@@ -1,6 +1,6 @@
-# gosoul
+# GoSoul
 
-GoSoul is a [netsoul](http://code.google.com/p/rubysoul-ng/wiki/NetSoul) authentication client written in Go.
+**GoSoul** is a [netsoul](http://code.google.com/p/rubysoul-ng/wiki/NetSoul) authentication client written in Go.
 
     go get -u github.com/fenicks/gosoul
     go install github.com/fenicks/gosoul
