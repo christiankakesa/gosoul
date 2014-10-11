@@ -12,4 +12,4 @@ fmt:
 	gofmt -w lib/*.go
 
 clean:
-	rm -rf gosoul
+	rm -rf gosoul *.gz
