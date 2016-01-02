@@ -1,4 +1,4 @@
-# GoSoul
+# GoSoul [![Build Status](https://travis-ci.org/fenicks/gosoul.svg?branch=master)](https://travis-ci.org/fenicks/gosoul)
 
 **GoSoul** is a [netsoul](https://doc.ubuntu-fr.org/netsoul) authentication client written in Go.
 
