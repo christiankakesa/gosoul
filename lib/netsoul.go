@@ -45,10 +45,13 @@ type UserData struct {
 type UserStates string
 
 const (
-	UserStateActif  UserStates = "actif"  // Client is connected and interaction is possible
-	UserStateAway   UserStates = "away"   // Client is connected but no interaction is possible (out of the computer/device)
-	UserStateIdle   UserStates = "idle"   // Client is connected but no interaction is possible (do nothing for a long time)
-	UserStateServer UserStates = "server" // Client is on application server
+	UserStateActif      UserStates = "actif"      // Client is connected and interaction is possible
+	UserStateAway       UserStates = "away"       // Client is connected but no interaction is possible (out of the computer/device)
+	UserStateConnection UserStates = "connection" // Client have not change is status after logged in
+	UserStateIdle       UserStates = "idle"       // Client is connected but no interaction is possible (do nothing for a long time)
+	UserStateLock       UserStates = "lock"       // Client desktop machine is locked
+	UserStateServer     UserStates = "server"     // Client is on application server
+	UserStateNone       UserStates = "none"       // Client is not used
 )
 
 type GoSoul struct {
@@ -71,7 +74,7 @@ func (gs *GoSoul) md5Auth() string {
 }
 
 func (gs *GoSoul) Authenticate(at AuthType) error {
-	gs.send("auth_ag ext_user none -")
+	gs.send("auth_ag ext_user none none")
 	err := gs.Parse()
 	if err != nil {
 		return err
@@ -87,7 +90,7 @@ func (gs *GoSoul) Authenticate(at AuthType) error {
 		return errors.New("Bad login or password")
 	} else {
 		gs.send("user_cmd attach")
-		gs.SetState(UserStateServer)
+		gs.SetState(UserStateNone)
 	}
 	return nil
 }
@@ -152,7 +155,7 @@ func New(login, password, addr string) (gs *GoSoul, err error) {
 		User: UserData{login: login,
 			password: password,
 			data:     url.QueryEscape(GOS_DATA),
-			State:    UserStateServer,
+			State:    UserStateNone,
 			Location: url.QueryEscape("@" + location)}}
 	gs.conn, err = net.Dial("tcp", addr)
 	if err != nil {
