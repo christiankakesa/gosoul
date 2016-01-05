@@ -54,11 +54,11 @@ func main() {
 		}
 		log.Fatalln(fmt.Sprintf(`Example: echo "%s:my_socks_pass" > %s`, login, confPath))
 	}
-	gos, err := gosoul.New(login, password, server)
+	gos, err := netsoul.New(login, password, server)
 	if err != nil {
 		log.Fatalln("[ERROR caught]: ", err)
 	}
-	err = gos.Authenticate(gosoul.AUTHTYPE_MD5)
+	err = gos.Authenticate(netsoul.AUTHTYPE_MD5)
 	if err != nil {
 		log.Fatalln("[ERROR caught]: ", err)
 	}
@@ -82,13 +82,13 @@ func main() {
 				}
 				time.Sleep(1 * time.Second)
 				log.Println("Try to reconnect to the NetSoul server: retry =>", strconv.Itoa(tryReconnect))
-				gos, err = gosoul.New(login, password, server)
+				gos, err = netsoul.New(login, password, server)
 				if err != nil {
 					log.Println("[ERROR caught]: ", err)
 					tryReconnect += 1
 					continue
 				}
-				err = gos.Authenticate(gosoul.AUTHTYPE_MD5)
+				err = gos.Authenticate(netsoul.AUTHTYPE_MD5)
 				if err != nil {
 					log.Println("[ERROR caught]: ", err)
 					tryReconnect += 1

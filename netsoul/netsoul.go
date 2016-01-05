@@ -4,7 +4,7 @@
 
 // Package gosoul provides functions to connect to the NetSoul socket.
 // For now only authentication is supported and the PING server command.
-package gosoul
+package netsoul
 
 import (
 	"crypto/md5"
