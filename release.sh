@@ -12,11 +12,11 @@ windows/386 windows/amd64"
 
 VERSION=$(git tag -l | sort | tail -n1)
 
-for PLATFORM in $PLATFORMS; do
+for PLATFORM in ${PLATFORMS}; do
     OS=${PLATFORM%/*}
     ARCH=${PLATFORM#*/}
-    GOOS=$OS CGO_ENABLED=0 GOARCH=$ARCH go build -ldflags "-X main.Version=$VERSION" -o $PROGNAME
-    ARCHIVE=$PROGNAME-$VERSION-$OS-$ARCH.tar.gz
-    tar -czf $ARCHIVE $PROGNAME
-    echo $ARCHIVE
+    GOOS=${OS} CGO_ENABLED=0 GOARCH=${ARCH} go build -ldflags "-X main.Version=${VERSION}" -o ${PROGNAME}
+    ARCHIVE=${PROGNAME}-${VERSION}-${OS}-${ARCH}.tar.gz
+    tar -czf ${ARCHIVE} ${PROGNAME}
+    echo ${ARCHIVE}
 done
