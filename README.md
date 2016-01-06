@@ -16,8 +16,8 @@ Choose your binary platform: https://github.com/fenicks/gosoul/releases/latest.
 Uncompress the archive and run the binary like the example bellow:
 
     cd /tmp
-    wget https://github.com/fenicks/gosoul/releases/download/v1.0.0/gosoul-v1.0.0-linux-amd64.tar.gz
-    tar -zxvf gosoul-v1.0.0-linux-amd64.tar.gz -C $HOME/bin
+    wget https://github.com/fenicks/gosoul/releases/download/v1.1.0/gosoul-v1.1.0-linux-amd64.tar.gz
+    tar -zxvf gosoul-v1.1.0-linux-amd64.tar.gz -C $HOME/bin
     $HOME/bin/gosoul
 
 If $HOME/bin is in your $PATH run: `gosoul`
