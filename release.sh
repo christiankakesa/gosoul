@@ -13,6 +13,9 @@ windows/386 windows/amd64"
 VERSION=$(git tag -l | sort | tail -n1)
 
 make clean
+git push --all
+git push --tags
+sleep 1
 go get -u github.com/fenicks/gosoul
 
 for PLATFORM in ${PLATFORMS}; do
