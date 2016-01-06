@@ -12,6 +12,9 @@ windows/386 windows/amd64"
 
 VERSION=$(git tag -l | sort | tail -n1)
 
+make clean
+go get -u github.com/fenicks/gosoul
+
 for PLATFORM in ${PLATFORMS}; do
     OS=${PLATFORM%/*}
     ARCH=${PLATFORM#*/}
