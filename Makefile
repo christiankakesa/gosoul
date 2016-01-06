@@ -9,7 +9,7 @@ gosoul: gosoul.go
 
 fmt:
 	gofmt -w *.go
-	gofmt -w lib/*.go
+	gofmt -w **/*.go
 
 clean:
 	rm -rf gosoul *.gz
